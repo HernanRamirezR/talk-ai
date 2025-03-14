@@ -33,12 +33,12 @@ const scenarios = {
     icon: 'exclamation-circle'
   },
   'technical-support': {
-    agentId: 'bXZpoQRf56sMnTw8rKvu',
+    agentId: 'aBIyIyyc3t3AnMh9ptwh',
     name: 'Soporte Técnico',
     icon: 'tools'
   },
   'sales-inquiry': {
-    agentId: 'cLzXnHjK12pQrYx7sSdi',
+    agentId: 'aBIyIyyc3t3AnMh9ptwh',
     name: 'Consultas de Ventas',
     icon: 'tags'
   }
@@ -70,7 +70,7 @@ function updateUI(isConnected, mode) {
   });
   
   // Mostrar u ocultar panel de retroalimentación
-  feedbackPanel.style.display = !isConnected && responseMetrics.responseTime.length > 0 ? 'block' : 'none';
+  // feedbackPanel.style.display = !isConnected && responseMetrics.responseTime.length > 0 ? 'block' : 'none';
 }
 
 // Función para actualizar el timer de la llamada
@@ -155,8 +155,8 @@ function generateSimulatedMetrics() {
   clarityScoreEl.textContent = avgClarityScore;
   problemSolvingEl.textContent = avgProblemSolving;
   
-  // Generar retroalimentación personalizada basada en métricas
-  generateFeedback(avgResponseTime, avgClarityScore, avgProblemSolving);
+  // // Generar retroalimentación personalizada basada en métricas
+  // generateFeedback(avgResponseTime, avgClarityScore, avgProblemSolving);
 }
 
 // Función para generar retroalimentación personalizada
@@ -323,6 +323,17 @@ window.addEventListener('beforeunload', () => {
     conversation.endSession().catch(console.error);
   }
 });
+// document.addEventListener("DOMContentLoaded", function () {
+//   document.querySelectorAll('.scenario-card').forEach(button => {
+//       button.addEventListener('click', function() {
+//           // Remueve la clase 'active' de todos los botones
+//           document.querySelectorAll('.scenario-card').forEach(btn => btn.classList.remove('active'));
+
+//           // Agrega la clase 'active' solo al botón que fue clickeado
+//           this.classList.add('active');
+//       });
+//   });
+// });
 
 // Inicialización de la interfaz de usuario
 updateUI(false);
