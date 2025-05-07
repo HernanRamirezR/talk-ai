@@ -1,4 +1,5 @@
 import { Conversation } from '@11labs/client';
+import './Styles.css';
 
 // Elementos del DOM
 const startButton = document.getElementById('startButton');
