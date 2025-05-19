@@ -1,4 +1,5 @@
 import { Conversation } from '@11labs/client';
+import { ElevenLabsClient } from "elevenlabs";
 import './Styles.css';
 
 // Elementos del DOM
@@ -17,6 +18,7 @@ const problemSolvingEl = document.getElementById('problemSolving');
 
 // Variables globales
 let conversation;
+let conversationId = null;
 let timerInterval;
 let startTime;
 let selectedScenario = 'customer-complaint';
@@ -44,6 +46,11 @@ const scenarios = {
     icon: 'tags'
   }
 };
+
+// Crea el cliente con tu API key
+const elevenLabsClient = new ElevenLabsClient({
+  apiKey: "sk_7eeb7c4ed0e012fa9da9706ac89b64d89eb5eb50a9a940b4"  // <--- Pon aquí tu API Key real
+});
 
 // Función para actualizar la interfaz de usuario según los estados
 function updateUI(isConnected, mode) {
@@ -136,28 +143,23 @@ function showError(message) {
 }
 
 // Función para generar métricas simuladas para esta demostración
-function generateSimulatedMetrics() {
-  // En una implementación real, estas métricas vendrían del análisis del audio
-  const responseTime = (Math.random() * 2 + 1.5).toFixed(1);
-  const clarityScore = Math.floor(Math.random() * 30 + 70);
-  const problemSolving = Math.floor(Math.random() * 40 + 60);
-  
-  responseMetrics.responseTime.push(parseFloat(responseTime));
-  responseMetrics.clarityScore.push(clarityScore);
-  responseMetrics.problemSolving.push(problemSolving);
-  
-  // Calcular promedios para mostrar
-  const avgResponseTime = (responseMetrics.responseTime.reduce((a, b) => a + b, 0) / responseMetrics.responseTime.length).toFixed(1);
-  const avgClarityScore = Math.floor(responseMetrics.clarityScore.reduce((a, b) => a + b, 0) / responseMetrics.clarityScore.length);
-  const avgProblemSolving = Math.floor(responseMetrics.problemSolving.reduce((a, b) => a + b, 0) / responseMetrics.problemSolving.length);
-  
-  // Actualizar métricas en la UI
-  responseTimeEl.textContent = avgResponseTime;
-  clarityScoreEl.textContent = avgClarityScore;
-  problemSolvingEl.textContent = avgProblemSolving;
-  
-  // // Generar retroalimentación personalizada basada en métricas
-  // generateFeedback(avgResponseTime, avgClarityScore, avgProblemSolving);
+function generateSimulatedMetrics(conversationData) {
+  if (!conversationData || !conversationData.evaluation_criteria_results) {
+    console.warn("No se encontró la sección 'evaluation_criteria_results' en los datos de la conversación");
+    return;
+  }
+
+  const evaluation = conversationData.analysis.evaluation_criteria_results;
+
+  // Extraemos cada resultado y lo convertimos a 1 o 0 según success/failure
+  const responseTimeResult = evaluation.response_time?.result === "success" ? 1 : 0;
+  const clarityResult = evaluation.clarity?.result === "success" ? 1 : 0;
+  const problemSolvingResult = evaluation.problem_solving_skills?.result === "success" ? 1 : 0;
+
+  // Actualizamos los elementos en la UI
+  responseTimeEl.textContent = responseTimeResult;
+  clarityScoreEl.textContent = clarityResult;
+  problemSolvingEl.textContent = problemSolvingResult;
 }
 
 // Función para generar retroalimentación personalizada
@@ -214,6 +216,24 @@ function generateFeedback(responseTime, clarityScore, problemSolving) {
   feedbackSummary.innerHTML = feedbackText;
 }
 
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchConversation(conversationId) {
+
+  await delay(10000);
+  try {
+    const conversationData = await elevenLabsClient.conversationalAi.getConversation(conversationId);
+    console.log("Datos de la conversación:", conversationData);
+
+    generateSimulatedMetrics(conversationData);
+
+  } catch (error) {
+    showError(`No se pudo recuperar la conversación: ${error.message || 'Error desconocido'}`);
+  }
+}
+
 // Iniciar conversación
 async function startConversation() {
   try {
@@ -236,16 +256,22 @@ async function startConversation() {
     // Iniciar la sesión de conversación
     conversation = await Conversation.startSession({
       agentId: scenario.agentId,
+
+      //Aqui se pueden agregar variables para customizar al agente...
+      //https://elevenlabs.io/docs/conversational-ai/customization/personalization/dynamic-variables
+
       onConnect: () => {
         console.log('Conexión establecida con el servidor');
         updateUI(true);
+        
       },
       onDisconnect: () => {
         console.log('Desconexión del servidor');
         stopTimer();
-        generateSimulatedMetrics();
+        fetchConversation(conversationId)
         updateUI(false);
         conversation = null;
+        conversationId =null;
       },
       onError: (error) => {
         showError(`Error en la conversación: ${error.message || 'Error desconocido'}`);
@@ -274,11 +300,20 @@ async function stopConversation() {
     try {
       stopButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finalizando...';
       stopButton.disabled = true;
+
+      conversationId = conversation.getId();
+      console.log("ID de conversacion: ", conversationId);
       
       await conversation.endSession();
       stopTimer();
-      generateSimulatedMetrics();
+      
       conversation = null;
+
+      // Recupera la conversación con ElevenLabs
+      await fetchConversation(conversationId);
+
+      conversationId =null;
+
       console.log('Sesión finalizada correctamente');
     } catch (error) {
       showError(`Error al finalizar la conversación: ${error.message || 'Error desconocido'}`);
