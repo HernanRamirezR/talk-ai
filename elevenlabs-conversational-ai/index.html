@@ -31,8 +31,8 @@
         </button>
         <button class="scenario-card" data-scenario="sales-inquiry">
           <div class="scenario-icon"><i class="fas fa-tags"></i></div>
-          <div class="scenario-title">Consultas de Ventas</div>
-          <div class="scenario-desc">Convierte consultas en ventas con técnicas persuasivas.</div>
+          <div class="scenario-title">Ventas y Prospección</div>
+          <div class="scenario-desc">Persuadir al cliente para que compre un producto/servicio.</div>
         </button>
       </div>
     </div>
@@ -41,6 +41,19 @@
       <div class="control-panel">
         <h2 class="panel-title">Centro de Control</h2>
         <div class="call-timer" id="callTimer">00:00</div>
+        
+        <!-- Campos para campaña -->
+        <div class="campaign-inputs">
+          <div class="input-group">
+            <label for="campana">Nombre de Campaña:</label>
+            <input type="text" id="campana" class="form-control" >
+          </div>
+          <div class="input-group">
+            <label for="desc_campana">Descripción de Campaña:</label>
+            <textarea id="desc_campana" class="form-control" ></textarea>
+          </div>
+        </div>
+        
         <div class="btn-container">
           <button id="startButton" class="btn btn-primary">
             <i class="fas fa-headset"></i> Iniciar Llamada

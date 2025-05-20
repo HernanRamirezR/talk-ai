@@ -19,6 +19,9 @@ const problemSolvingEl = document.getElementById('problemSolving');
 const responseTimeRationaleEl = document.getElementById('responseTimeRationale');
 const clarityRationaleEl = document.getElementById('clarityRationale');
 const problemSolvingRationaleEl = document.getElementById('problemSolvingRationale');
+// Elementos para campaña
+const campanaInput = document.getElementById('campana');
+const descCampanaInput = document.getElementById('desc_campana');
 
 // Variables globales
 let conversation;
@@ -37,17 +40,23 @@ const scenarios = {
   'customer-complaint': {
     agentId: 'aBIyIyyc3t3AnMh9ptwh',
     name: 'Manejo de Quejas',
-    icon: 'exclamation-circle'
+    icon: 'exclamation-circle',
+    defaultCampana: 'Complaint Management',
+    defaultDescCampana: 'Learn to manage dissatisfied customers and effectively resolve problems.'
   },
   'technical-support': {
-    agentId: 'aBIyIyyc3t3AnMh9ptwh',
+    agentId: 'agent_01jvnj7skqfdwrttz37fcs8nbk',
     name: 'Soporte Técnico',
-    icon: 'tools'
+    icon: 'tools',
+    defaultCampana: 'Technical Support',
+    defaultDescCampana: 'Guide customers through complex technical solutions.'
   },
   'sales-inquiry': {
-    agentId: 'aBIyIyyc3t3AnMh9ptwh',
-    name: 'Consultas de Ventas',
-    icon: 'tags'
+    agentId: 'agent_01jvnjgc8ffvxsb9rnv2019gsg',
+    name: 'Ventas y Prospección',
+    icon: 'tags',
+    defaultCampana: 'Sales and Prospecting',
+    defaultDescCampana: 'Persuade customers to purchase a product/service.'
   }
 };
 
@@ -251,9 +260,20 @@ async function fetchConversation(conversationIdToFetch) {
   }
 }
 
+// Modificar la función de validación para que siempre sea válida
+function validarCamposCampana() {
+  // Ya no validamos campos obligatorios porque usaremos valores predeterminados
+  return true;
+}
+
 // Iniciar conversación
 async function startConversation() {
   try {
+    // Validar campos de campaña
+    if (!validarCamposCampana()) {
+      return;
+    }
+
     // Cambiar apariencia del botón mientras se procesa
     startButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando...';
     startButton.disabled = true;
@@ -267,6 +287,13 @@ async function startConversation() {
     // Obtener el escenario seleccionado
     const scenario = scenarios[selectedScenario];
     
+    // Obtener valores de campaña o usar valores predeterminados del escenario seleccionado
+    const nombreCampana = campanaInput.value.trim() || scenario.defaultCampana;
+    const descripcionCampana = descCampanaInput.value.trim() || scenario.defaultDescCampana;
+    
+    console.log('Usando campaña:', nombreCampana);
+    console.log('Usando descripción:', descripcionCampana);
+    
     // Iniciar el cronómetro
     startTimer();
     
@@ -274,8 +301,11 @@ async function startConversation() {
     conversation = await Conversation.startSession({
       agentId: scenario.agentId,
 
-      //Aqui se pueden agregar variables para customizar al agente...
-      //https://elevenlabs.io/docs/conversational-ai/customization/personalization/dynamic-variables
+      // Variables dinámicas para customizar al agente
+      dynamicVariables: {
+        campana: nombreCampana,
+        desc_campana: descripcionCampana
+      },
 
       onConnect: () => {
         console.log('Conexión establecida con el servidor');
@@ -354,6 +384,13 @@ async function stopConversation() {
   }
 }
 
+// Actualiza los placeholders de los campos de campaña según el escenario seleccionado
+function actualizarPlaceholders() {
+  const scenario = scenarios[selectedScenario];
+  campanaInput.placeholder = `${scenario.defaultCampana}`;
+  descCampanaInput.placeholder = `${scenario.defaultDescCampana}`;
+}
+
 // Configuración de selección de escenarios
 function setupScenarioSelection() {
   scenarioCards.forEach(card => {
@@ -372,11 +409,17 @@ function setupScenarioSelection() {
       
       // Actualizar UI
       currentScenario.innerHTML = `<i class="fas fa-${scenarios[selectedScenario].icon}"></i> ${scenarios[selectedScenario].name}`;
+      
+      // Actualizar placeholders
+      actualizarPlaceholders();
     });
   });
   
   // Establecer el escenario inicial
   currentScenario.innerHTML = `<i class="fas fa-${scenarios[selectedScenario].icon}"></i> ${scenarios[selectedScenario].name}`;
+  
+  // Inicializar placeholders para el escenario inicial
+  actualizarPlaceholders();
 }
 
 // Agregar manejadores de eventos
