@@ -15,6 +15,10 @@ const feedbackSummary = document.getElementById('feedbackSummary');
 const responseTimeEl = document.getElementById('responseTime');
 const clarityScoreEl = document.getElementById('clarityScore');
 const problemSolvingEl = document.getElementById('problemSolving');
+// Elementos para los rationales
+const responseTimeRationaleEl = document.getElementById('responseTimeRationale');
+const clarityRationaleEl = document.getElementById('clarityRationale');
+const problemSolvingRationaleEl = document.getElementById('problemSolvingRationale');
 
 // Variables globales
 let conversation;
@@ -144,22 +148,31 @@ function showError(message) {
 
 // Función para generar métricas simuladas para esta demostración
 function generateSimulatedMetrics(conversationData) {
-  if (!conversationData || !conversationData.evaluation_criteria_results) {
+  if (!conversationData || !conversationData.analysis.evaluation_criteria_results) {
     console.warn("No se encontró la sección 'evaluation_criteria_results' en los datos de la conversación");
     return;
   }
 
+  const evaluation_criteria_clarity_results = conversationData.analysis.evaluation_criteria_results.clarity.rationale;
+  const evaluation_criteria_results_problem_solving_skills = conversationData.analysis.evaluation_criteria_results.problem_solving_skills.rationale;
+  const evaluation_criteria_results_response_time = conversationData.analysis.evaluation_criteria_results.response_time.rationale;
+
   const evaluation = conversationData.analysis.evaluation_criteria_results;
 
   // Extraemos cada resultado y lo convertimos a 1 o 0 según success/failure
-  const responseTimeResult = evaluation.response_time?.result === "success" ? 1 : 0;
-  const clarityResult = evaluation.clarity?.result === "success" ? 1 : 0;
-  const problemSolvingResult = evaluation.problem_solving_skills?.result === "success" ? 1 : 0;
+  const responseTimeResult = evaluation.response_time?.result === "success" ? "Aprovado" : "Reprovado";
+  const clarityResult = evaluation.clarity?.result === "success" ? "Aprovado" : "Reprovado";
+  const problemSolvingResult = evaluation.problem_solving_skills?.result === "success" ? "Aprovado" : "Reprovado";
 
   // Actualizamos los elementos en la UI
   responseTimeEl.textContent = responseTimeResult;
   clarityScoreEl.textContent = clarityResult;
   problemSolvingEl.textContent = problemSolvingResult;
+  
+  // Actualizamos los rationales
+  responseTimeRationaleEl.textContent = evaluation_criteria_results_response_time || "No disponible";
+  clarityRationaleEl.textContent = evaluation_criteria_clarity_results || "No disponible";
+  problemSolvingRationaleEl.textContent = evaluation_criteria_results_problem_solving_skills || "No disponible";
 }
 
 // Función para generar retroalimentación personalizada
@@ -220,11 +233,15 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function fetchConversation(conversationId) {
+async function fetchConversation(conversationIdToFetch) {
+  if (!conversationIdToFetch) {
+    showError("No se pudo recuperar la conversación: ID de conversación no proporcionado.");
+    return;
+  }
 
   await delay(10000);
   try {
-    const conversationData = await elevenLabsClient.conversationalAi.getConversation(conversationId);
+    const conversationData = await elevenLabsClient.conversationalAi.getConversation(conversationIdToFetch);
     console.log("Datos de la conversación:", conversationData);
 
     generateSimulatedMetrics(conversationData);
@@ -265,13 +282,26 @@ async function startConversation() {
         updateUI(true);
         
       },
-      onDisconnect: () => {
+      onDisconnect: async () => {
         console.log('Desconexión del servidor');
         stopTimer();
-        fetchConversation(conversationId)
+        
+        const idToFetch = conversationId;
+
+        if (idToFetch) {
+          console.log('onDisconnect: Attempting to fetch conversation with ID:', idToFetch);
+          try {
+            await fetchConversation(idToFetch);
+          } catch (error) {
+            console.error("Error during fetchConversation called from onDisconnect:", error);
+          }
+        } else {
+          console.warn("onDisconnect: conversationId was not set or already null. Cannot fetch conversation details.");
+        }
+        
         updateUI(false);
         conversation = null;
-        conversationId =null;
+        conversationId = null;
       },
       onError: (error) => {
         showError(`Error en la conversación: ${error.message || 'Error desconocido'}`);
@@ -287,6 +317,7 @@ async function startConversation() {
     showError(`No se pudo iniciar la conversación: ${error.message || 'Error desconocido'}`);
     stopTimer();
     updateUI(false);
+    conversation = null;
   } finally {
     // Restaurar apariencia del botón
     startButton.innerHTML = '<i class="fas fa-headset"></i> Iniciar Simulación';
@@ -302,25 +333,24 @@ async function stopConversation() {
       stopButton.disabled = true;
 
       conversationId = conversation.getId();
-      console.log("ID de conversacion: ", conversationId);
+      console.log("ID de conversacion (set for onDisconnect): ", conversationId);
       
       await conversation.endSession();
       stopTimer();
       
-      conversation = null;
-
-      // Recupera la conversación con ElevenLabs
-      await fetchConversation(conversationId);
-
-      conversationId =null;
-
-      console.log('Sesión finalizada correctamente');
+      console.log('Sesión finalizada correctamente (control returned to stopConversation)');
     } catch (error) {
       showError(`Error al finalizar la conversación: ${error.message || 'Error desconocido'}`);
+      stopTimer();
+      updateUI(false);
+      conversation = null;
+      conversationId = null;
     } finally {
       stopButton.innerHTML = '<i class="fas fa-stop-circle"></i> Finalizar Simulación';
-      updateUI(false);
     }
+  } else {
+    console.warn("stopConversation called but no active conversation object found.");
+    updateUI(false);
   }
 }
 
@@ -359,17 +389,6 @@ window.addEventListener('beforeunload', () => {
     conversation.endSession().catch(console.error);
   }
 });
-// document.addEventListener("DOMContentLoaded", function () {
-//   document.querySelectorAll('.scenario-card').forEach(button => {
-//       button.addEventListener('click', function() {
-//           // Remueve la clase 'active' de todos los botones
-//           document.querySelectorAll('.scenario-card').forEach(btn => btn.classList.remove('active'));
-
-//           // Agrega la clase 'active' solo al botón que fue clickeado
-//           this.classList.add('active');
-//       });
-//   });
-// });
 
 // Inicialización de la interfaz de usuario
 updateUI(false);
